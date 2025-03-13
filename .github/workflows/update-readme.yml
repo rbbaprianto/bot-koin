@@ -17,15 +17,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Get list of all repositories
-        id: get_repos
+      - name: Get list of repositories from Codeberg
         run: |
-          repos=$(curl -s -H "Accept: application/vnd.github.v3+json" "https://codeberg.org/api/v1/users/smart-archive/repos" | jq -r '.[].name')
-          {
-            echo "REPO_LIST<<EOF"
-            echo "$repos"
-            echo "EOF"
-          } >> "$GITHUB_ENV"
+          repos=$(curl -s -H "Accept: application/json" "https://codeberg.org/api/v1/users/smart-airdrop/repos" | jq -r '.[].name' | tr '\n' ' ')
+          echo "REPO_LIST=$repos" >> $GITHUB_ENV
+
 
 
       - name: Update README.md
