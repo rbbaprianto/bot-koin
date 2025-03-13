@@ -1,1 +1,1 @@
-# bot-earnos
+# bot
