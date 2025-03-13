@@ -1,36 +1,35 @@
-name: Update README
+name: Update README with Codeberg Repos
 
 on:
   push:
     branches:
       - main
-      - master
+  schedule:
+    - cron: '0 0 * * *'  # Jalankan setiap hari pada pukul 00:00 UTC
   workflow_dispatch:
 
 jobs:
   update-readme:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
-          token: ${{ secrets.PAT_TOKEN }}
+          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
+      - name: Get list of all repositories
+        id: get_repos
+        run: |
+          repos=$(curl -s -H "Accept: application/json" "https://codeberg.org/api/v1/users/smart-airdrop/repos" | jq -r '.[].name')
+          echo "REPO_LIST=$repos" >> $GITHUB_ENV
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Generate README
-        run: node generate_readme.js
-        
-      - name: Debug Git Config
-        run: git config --list
+      - name: Update README.md
+        run: |
+          echo "# List of Codeberg Repositories" > README.md
+          echo "" >> README.md
+          for repo in ${{ steps.get_repos.outputs.repos }}; do
+            echo "- $repo" >> README.md
+          done
 
       - name: Push changes
         run: |
@@ -38,8 +37,9 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/rbbaprianto/bot-koin.git
           git add README.md
-          git commit -m "Update README with new app list" || echo "No changes to commit"
+          git commit -m "Update README with new repo list" || echo "No changes to commit"
           git push origin main
+
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
 
