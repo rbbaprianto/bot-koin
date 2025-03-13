@@ -1,48 +1,25 @@
 const fs = require("fs");
 
-const repoName = "Airdrop Automation Bots"; // Ganti dengan nama repo yang sesuai
+const readmePath = "README.md";
 
-// Baca daftar direktori dalam folder utama
-const directories = fs.readdirSync("./", { withFileTypes: true })
-  .filter(dirent => dirent.isDirectory() && dirent.name !== "node_modules")
-  .map(dirent => `- **${dirent.name}**`);
+// Ambil daftar folder di root repo (hanya direktori)
+const appFolders = fs
+  .readdirSync(".", { withFileTypes: true })
+  .filter((dirent) => dirent.isDirectory() && !dirent.name.startsWith(".") && dirent.name !== "node_modules" && dirent.name !== "core" && dirent.name !== "config")
+  .map((dirent) => `- ${dirent.name}`);
 
-const readmeContent = `# ${repoName}
+const newReadmeContent = `# 🤖 Bot Automation Airdrop
 
-Koleksi bot automation untuk airdrop. Setiap bot memiliki fungsi khusus untuk mengotomatisasi tugas terkait airdrop.
+Repository ini berisi sekumpulan bot automation untuk airdrop.
 
-## 📜 Daftar Bot:
-${directories.length > 0 ? directories.join("\n") : "Belum ada bot yang terdaftar."}
-
-## 🚀 Cara Menggunakan:
-1. Clone repo ini:  
-   \`\`\`sh
-   git clone https://github.com/rbbaprianto/bot-koin.git
-   \`\`\`
-2. Masuk ke folder bot yang ingin dijalankan:
-   \`\`\`sh
-   cd bot-koin
-   \`\`\`
-3. Install dependencies:
-   \`\`\`sh
-   npm install
-   \`\`\`
-4. Jalankan bot:
-   \`\`\`sh
-   node generate_readme.js
-   \`\`\`
-
-## 📌 Catatan:
-- Pastikan **Node.js** sudah terinstall (`>=14.x`).
-- Beberapa bot mungkin membutuhkan konfigurasi API key/token.
-- Cek file \`.env\` atau `config/config.js` dalam masing-masing folder bot.
+## 📂 Daftar Aplikasi:
+${appFolders.length ? appFolders.join("\n") : "_Belum ada aplikasi yang terdeteksi._"}
 
 ---
 
-_Dibuat otomatis oleh script `generate_readme.js`._
+📌 **README ini diperbarui secara otomatis setiap kali ada aplikasi baru yang ditambahkan.**
 `;
 
-// Tulis ke README.md
-fs.writeFileSync("README.md", readmeContent, "utf8");
+fs.writeFileSync(readmePath, newReadmeContent, "utf8");
 
-console.log("✅ README.md berhasil dibuat!");
+console.log("✅ README.md berhasil diperbarui!");
