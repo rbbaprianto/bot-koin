@@ -1,5 +1,10 @@
-npm init -y
-npm install
-git add package.json package-lock.json
-git commit -m "Add package.json"
-git push origin main
+{
+  "name": "bot-koin",
+  "version": "1.0.0",
+  "description": "Sekumpulan bot automation untuk airdrop",
+  "main": "generate_readme.js",
+  "scripts": {
+    "start": "node generate_readme.js"
+  },
+  "dependencies": {}
+}
