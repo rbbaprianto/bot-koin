@@ -1,9 +1,6 @@
 name: Comot koin-bot
 
 on:
-  # push:
-  #   branches:
-  #     - main
   workflow_dispatch:
     inputs:
       SOURCE_URL:
@@ -44,7 +41,8 @@ jobs:
         run: |
           mkdir repos && cd repos
           for repo in $(cat ../repo_list.txt); do
-            git clone "https://codeberg.org/smart-airdrop/$repo.git" "$repo"
+            echo "Cloning $repo..."
+            git clone --depth=1 "https://codeberg.org/smart-airdrop/$repo.git" "$repo" || echo "Failed to clone $repo"
           done
 
       - name: Clean repositories (Remove .git and hidden files)
@@ -54,6 +52,13 @@ jobs:
             echo "Cleaning repository: $repo"
             rm -rf "$repo/.git" "$repo/.github" "$repo/.gitignore"
           done
+
+      - name: Copy repos to main directory
+        run: |
+          rm -rf old_repos
+          mv repos old_repos
+          mkdir -p repos
+          cp -r old_repos/* repos/
 
       - name: Generate README.md
         run: |
@@ -82,34 +87,31 @@ jobs:
           git pull --rebase origin main || echo "No remote changes"
       
           # Tambahkan dan commit perubahan
-          git add README.md
-          git commit -m "Update README with new repo list" || echo "No changes to commit"
+          git add README.md repos/
+          git commit -m "Update repos and README" || echo "No changes to commit"
       
           # Push ke repository
           GIT_SSH_COMMAND="ssh -v" git push origin main
 
       - name: Send Telegram Notification
         run: |
-          # Escape karakter khusus untuk MarkdownV2
           escape_markdown() {
-            echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\\\&")}1'
+            echo "$1" | sed -e 's/\([\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]\)/\\\1/g'
           }
   
-          # Ambil input dari workflow dispatch
           SOURCE_URL="${{ github.event.inputs.SOURCE_URL }}"
-          #TARGET_URL="${{ github.event.inputs.TARGET_URL }}"
   
-          MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
-          MESSAGE+="📌 *Source:* [$SOURCE_URL]($SOURCE_URL)\\n"
+          MESSAGE="✅ *Repository Sync Completed\!*\\n\\n"
+          MESSAGE+="📌 *Source:* [$(escape_markdown "$SOURCE_URL")]($SOURCE_URL)\\n"
           MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
-          MESSAGE+="📜 *List of Repositories:*\\n\`\`\`\n"
+          MESSAGE+="📜 *List of Repositories:*\\n\`\`\`\\n"
   
           while IFS= read -r repo; do
             ESCAPED_REPO=$(escape_markdown "$repo")
             MESSAGE+="$ESCAPED_REPO\\n"
           done < repo_list.txt
   
-          MESSAGE+="\`\`\`" # Menutup code block
+          MESSAGE+="\`\`\`"
   
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
