@@ -76,13 +76,17 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote add origin git@github.com:rbbaprianto/bot-koin.git || git remote set-url origin git@github.com:rbbaprianto/bot-koin.git
+          git remote set-url origin git@github.com:rbbaprianto/bot-koin.git
+      
+          # Tarik perubahan terbaru dari remote dengan rebase untuk menghindari konflik
+          git pull --rebase origin main || echo "No remote changes"
+      
+          # Tambahkan dan commit perubahan
           git add README.md
           git commit -m "Update README with new repo list" || echo "No changes to commit"
+      
+          # Push ke repository
           GIT_SSH_COMMAND="ssh -v" git push origin main
-            
-      - name: Debug SSH Connection
-        run: ssh -vT git@github.com
 
       - name: Send Telegram Notification
         run: |
