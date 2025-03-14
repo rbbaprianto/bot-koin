@@ -41,11 +41,11 @@ jobs:
             exit 1
           fi
 
-      - name: Clone repositories
+      - name: Clone repositories from Codeberg
         run: |
           mkdir repos && cd repos
           for repo in $(cat ../repo_list.txt); do
-            git clone "${{ github.event.inputs.SOURCE_URL }}/$repo.git" "$repo"
+            git clone "https://codeberg.org/smart-airdrop/$repo.git" "$repo"
           done
 
       - name: Clean repositories (Remove .git and hidden files)
