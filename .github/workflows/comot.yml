@@ -69,12 +69,20 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Check SSH Key
+        run: cat ~/.ssh/id_ed25519
+        
+      - name: Setup SSH Agent
+        run: |
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
       
       - name: Push changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin git@github.com:rbbaprianto/bot-koin.git
+          git remote add origin git@github.com:rbbaprianto/bot-koin.git || git remote set-url origin git@github.com:rbbaprianto/bot-koin.git
           git add README.md
           git commit -m "Update README with new repo list" || echo "No changes to commit"
           GIT_SSH_COMMAND="ssh -v" git push origin main
