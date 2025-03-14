@@ -24,9 +24,33 @@ jobs:
       - name: Install dependencies
         run: sudo apt update && sudo apt install -y jq git
 
+      - name: Extract source domain and organization
+        run: |
+          SOURCE_URL="${{ github.event.inputs.SOURCE_URL }}"
+          echo "Using SOURCE_URL: $SOURCE_URL"
+          
+          # Ekstrak domain dan user/org dari URL
+          DOMAIN=$(echo "$SOURCE_URL" | awk -F/ '{print $3}')
+          ORG=$(echo "$SOURCE_URL" | awk -F/ '{print $4}')
+          
+          echo "Extracted DOMAIN: $DOMAIN"
+          echo "Extracted ORG: $ORG"
+
+          # Simpan di environment agar bisa dipakai di step berikutnya
+          echo "DOMAIN=$DOMAIN" >> $GITHUB_ENV
+          echo "ORG=$ORG" >> $GITHUB_ENV
+
       - name: Get repository list from source
         run: |
-          API_URL="https://codeberg.org/api/v1/users/smart-airdrop/repos"
+          if [[ "$DOMAIN" == "codeberg.org" ]]; then
+            API_URL="https://codeberg.org/api/v1/users/$ORG/repos"
+          elif [[ "$DOMAIN" == "github.com" ]]; then
+            API_URL="https://api.github.com/users/$ORG/repos"
+          else
+            echo "Unsupported domain: $DOMAIN"
+            exit 1
+          fi
+
           echo "Fetching repository list from $API_URL..."
           response=$(curl -s -H "Accept: application/json" "$API_URL")
       
@@ -40,12 +64,12 @@ jobs:
             exit 1
           fi
 
-      - name: Clone repositories from Codeberg
+      - name: Clone repositories from source
         run: |
           mkdir repos && cd repos
           for repo in $(cat ../repo_list.txt); do
             echo "Cloning $repo..."
-            git clone --depth=1 "https://codeberg.org/smart-airdrop/$repo.git" "$repo" || echo "Failed to clone $repo"
+            git clone --depth=1 "https://$DOMAIN/$ORG/$repo.git" "$repo" || echo "Failed to clone $repo"
           done
 
       - name: Clean repositories (Remove .git and hidden files)
