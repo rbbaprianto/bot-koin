@@ -68,16 +68,10 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-
-      - name: Check SSH Key
-        run: cat ~/.ssh/id_ed25519
-        
-      - name: Setup SSH Agent
-        run: |
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/id_ed25519
-      
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+    
       - name: Push changes
         run: |
           git config --global user.name "github-actions[bot]"
