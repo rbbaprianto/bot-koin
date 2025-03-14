@@ -91,15 +91,17 @@ jobs:
       - name: Send Telegram Notification
         run: |
           MESSAGE="✅ *Repository Sync Completed!*\n\n"
-          MESSAGE+="*Source:* ${{ github.event.inputs.SOURCE_URL || 'https://codeberg.org/smart-airdrop' }}\n"
-          MESSAGE+="*Target:* https://github.com/rbbaprianto/bot-koin\n\n"
+          MESSAGE+="*Source:* [Codeberg](https://codeberg.org/smart-airdrop)\n"
+          MESSAGE+="*Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\n\n"
           MESSAGE+="*List of Repositories:*\n"
-          for repo in $(cat repo_list.txt); do
-            MESSAGE+="\n- $repo"
-          done
-          
+      
+          while IFS= read -r repo; do
+            MESSAGE+="• \`$repo\`\n"
+          done < repo_list.txt
+      
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "message_thread_id=144" \
-            -d "text=$MESSAGE" \
-            -d "parse_mode=Markdown"
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=MarkdownV2"
+
