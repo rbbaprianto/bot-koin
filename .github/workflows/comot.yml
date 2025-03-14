@@ -34,7 +34,7 @@ jobs:
           if echo "$response" | jq empty 2>/dev/null; then
             repos=$(echo "$response" | jq -r '.[].name')
             echo "$repos" > repo_list.txt
-            echo "REPO_LIST=$repos" >> $GITHUB_ENV
+            echo "REPO_LIST=$(echo "$repos" | tr '\n' ' ')" >> $GITHUB_ENV
           else
             echo "Error: Response is not a valid JSON"
             echo "Response: $response"
