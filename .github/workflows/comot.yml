@@ -90,9 +90,9 @@ jobs:
 
       - name: Send Telegram Notification
         run: |
-          # Escape karakter khusus agar sesuai dengan MarkdownV2
+          # Escape karakter khusus untuk MarkdownV2
           escape_markdown() {
-            echo "$1" | sed -E 's/([]_*\[\]()~`>#\+\-=|{}.!])/\\\1/g'
+            echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\\\&")}1'
           }
   
           MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
@@ -112,3 +112,4 @@ jobs:
             -d "message_thread_id=144" \
             -d "text=${MESSAGE}" \
             -d "parse_mode=MarkdownV2"
+
