@@ -92,7 +92,7 @@ jobs:
         run: |
           # Escape karakter MarkdownV2 secara manual
           escape_markdown() {
-            echo "$1" | sed -E 's/[_*\[\]()~`>#\+\-=|{}.!]/\\&/g'
+            echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\&")}1'
           }
       
           MESSAGE="✅ *Repository Sync Completed!*\\n\\n"
@@ -110,3 +110,4 @@ jobs:
             -d "message_thread_id=144" \
             -d "text=${MESSAGE}" \
             -d "parse_mode=MarkdownV2"
+
