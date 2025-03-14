@@ -90,9 +90,9 @@ jobs:
 
       - name: Send Telegram Notification
         run: |
-          # Encode teks agar tidak error di MarkdownV2 Telegram
+          # Escape karakter MarkdownV2 secara manual
           escape_markdown() {
-            echo "$1" | sed -E 's/([_*\[\]()~`>#\+\-=|{}.!])/\\\1/g'
+            echo "$1" | sed -E 's/[_*\[\]()~`>#\+\-=|{}.!]/\\&/g'
           }
       
           MESSAGE="✅ *Repository Sync Completed!*\\n\\n"
