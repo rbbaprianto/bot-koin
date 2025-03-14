@@ -63,22 +63,22 @@ jobs:
             echo "- [$repo](https://github.com/rbbaprianto/bot-koin/tree/main/repos/$repo)" >> README.md
           done
 
-      - name: Push changes
-        env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+      
+      - name: Push changes via SSH
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-      
-          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/rbbaprianto/bot-koin.git
-      
+          git remote set-url origin git@github.com:rbbaprianto/bot-koin.git
           git add README.md
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "Update README with new repo list"
-            git push origin main
-          fi
+          git commit -m "Update README with new repo list" || echo "No changes to commit"
+          git push origin main
+
 
       - name: Send Telegram Notification
         run: |
