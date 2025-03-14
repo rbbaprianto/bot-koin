@@ -96,7 +96,7 @@ jobs:
       - name: Send Telegram Notification
         run: |
           escape_markdown() {
-            echo "$1" | sed -E 's/([\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!])/\\\1/g'
+            echo "$1" | sed -E 's/([\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\!])/\\\1/g'
           }
       
           SOURCE_URL="${{ github.event.inputs.SOURCE_URL }}"
@@ -104,18 +104,15 @@ jobs:
           MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
           MESSAGE+="📌 *Source:* [$(escape_markdown "$SOURCE_URL")]($SOURCE_URL)\\n"
           MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
-          MESSAGE+="📜 *List of Repositories:*\\n\`\`\`\\n"
+          MESSAGE+="📜 *List of Repositories:*\\n"
       
           while IFS= read -r repo; do
             ESCAPED_REPO=$(escape_markdown "$repo")
-            MESSAGE+="${ESCAPED_REPO}\\n"
+            MESSAGE+="🔹 ${ESCAPED_REPO}\\n"
           done < repo_list.txt
-      
-          MESSAGE+="\`\`\`"
       
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "message_thread_id=144" \
             -d "text=${MESSAGE}" \
             -d "parse_mode=MarkdownV2"
-
