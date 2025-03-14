@@ -90,13 +90,14 @@ jobs:
 
       - name: Send Telegram Notification
         run: |
-          MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
+          MESSAGE="✅ *Repository Sync Completed\!*\\n\\n"
           MESSAGE+="📌 *Source:* [Codeberg](https://codeberg.org/smart-airdrop)\\n"
           MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
           MESSAGE+="📜 *List of Repositories:*\\n"
       
           while IFS= read -r repo; do
-            MESSAGE+="• \`$repo\`\\n"
+            ESCAPED_REPO=$(echo "$repo" | sed 's/_/\\_/g')  # Escape karakter underscore
+            MESSAGE+="• \`$ESCAPED_REPO\`\\n"
           done < repo_list.txt
       
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
@@ -104,6 +105,7 @@ jobs:
             -d "message_thread_id=144" \
             -d "text=${MESSAGE}" \
             -d "parse_mode=MarkdownV2"
+
 
 
 
