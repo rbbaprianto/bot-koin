@@ -63,22 +63,24 @@ jobs:
             echo "- [$repo](https://github.com/rbbaprianto/bot-koin/tree/main/repos/$repo)" >> README.md
           done
 
-      - name: Setup SSH
+      - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
       
-      - name: Push changes via SSH
+      - name: Push changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin git@github.com:rbbaprianto/bot-koin.git
           git add README.md
           git commit -m "Update README with new repo list" || echo "No changes to commit"
-          git push origin main
-
+          GIT_SSH_COMMAND="ssh -v" git push origin main
+      
+      - name: Debug SSH Connection
+        run: ssh -vT git@github.com
 
       - name: Send Telegram Notification
         run: |
