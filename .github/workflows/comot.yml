@@ -1,9 +1,6 @@
-name: Comot koin-bot
+name: Sync Codeberg to GitHub
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       SOURCE_URL:
@@ -11,133 +8,197 @@ on:
         required: true
         default: 'https://codeberg.org/smart-airdrop'
 
-  schedule:
-    - cron: '0 0 * * *'  # Jalan setiap hari jam 00:00 UTC
-
 jobs:
-  sync-repos:
+  sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Install dependencies
-        run: sudo apt update && sudo apt install -y jq git
-
-      - name: Get repository list from source
+      - name: Clone Codeberg Repositories
         run: |
-          API_URL="https://codeberg.org/api/v1/users/smart-airdrop/repos"
-          echo "Fetching repository list from $API_URL..."
-          response=$(curl -s -H "Accept: application/json" "$API_URL")
-      
-          if echo "$response" | jq empty 2>/dev/null; then
-            repos=$(echo "$response" | jq -r '.[].name')
-            echo "$repos" > repo_list.txt
-            echo "REPO_LIST=$(echo "$repos" | tr '\n' ' ')" >> $GITHUB_ENV
-          else
-            echo "Error: Response is not a valid JSON"
-            echo "Response: $response"
-            exit 1
-          fi
+          git clone --mirror ${{ github.event.inputs.SOURCE_URL }} temp_repo
+          cd temp_repo
+          git remote set-url --push origin https://github.com/rbbaprianto/bot-koin
+          git push --mirror
 
-      - name: Clone repositories from Codeberg
+      - name: Update README with List of Repositories
         run: |
-          mkdir repos && cd repos
-          for repo in $(cat ../repo_list.txt); do
-            git clone "https://codeberg.org/smart-airdrop/$repo.git" "$repo"
-          done
-
-      - name: Clean repositories (Remove .git and hidden files)
-        run: |
-          cd repos
-          for repo in *; do
-            echo "Cleaning repository: $repo"
-            rm -rf "$repo/.git" "$repo/.github" "$repo/.gitignore"
-          done
-
-      - name: Generate README.md
-        run: |
-          echo "# List of Repositories" > README.md
-          echo "" >> README.md
-          for repo in $(cat repo_list.txt); do
-            echo "- [$repo](https://github.com/rbbaprianto/bot-koin/tree/main/repos/$repo)" >> README.md
-          done
-
-      - name: Setup SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_ed25519
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-    
-      - name: Push changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin git@github.com:rbbaprianto/bot-koin.git
-      
-          # Tarik perubahan terbaru dari remote dengan rebase untuk menghindari konflik
-          git pull --rebase origin main || echo "No remote changes"
-      
-          # Tambahkan dan commit perubahan
+          echo "## List of Synced Repositories" > repo_list.txt
+          cd temp_repo
+          ls -1 > ../repo_list.txt
+          cd ..
+          cat repo_list.txt > README.md
           git add README.md
-          git commit -m "Update README with new repo list" || echo "No changes to commit"
-      
-          # Push ke repository
-          GIT_SSH_COMMAND="ssh -v" git push origin main
-
-      # - name: Send Telegram Notification
-      #   run: |
-      #     # Escape karakter khusus untuk MarkdownV2
-      #     escape_markdown() {
-      #       echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\\\&")}1'
-      #     }
-  
-      #     MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
-      #     MESSAGE+="📌 *Source:* [Codeberg](https://codeberg.org/smart-airdrop)\\n"
-      #     MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
-      #     MESSAGE+="📜 *List of Repositories:*\\n\`\`\`"
-  
-      #     while IFS= read -r repo; do
-      #       ESCAPED_REPO=$(escape_markdown "$repo")
-      #       MESSAGE+="\\n$ESCAPED_REPO"
-      #     done < repo_list.txt
-  
-      #     MESSAGE+="\\n\`\`\`" # Menutup code block
-  
-      #     curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-      #       -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-      #       -d "message_thread_id=144" \
-      #       -d "text=${MESSAGE}" \
-      #       -d "parse_mode=MarkdownV2"
+          git commit -m "Update repository list"
+          git push origin main
 
       - name: Send Telegram Notification
         run: |
-          # Escape karakter khusus untuk MarkdownV2
+          # Escape karakter MarkdownV2
           escape_markdown() {
-            echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\\\&")}1'
+            echo "$1" | sed -E 's/([]_*\[\]()~`>#\+\-=|{}.!])/\\\1/g'
           }
-  
-          # Ambil input dari workflow dispatch
+
+          # Ambil input dari workflow dispatch, berikan default jika kosong
           SOURCE_URL="${{ github.event.inputs.SOURCE_URL }}"
-          #TARGET_URL="${{ github.event.inputs.TARGET_URL }}"
-  
-          MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
-          MESSAGE+="📌 *Source:* [$SOURCE_URL]($SOURCE_URL)\\n"
-          MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
-          MESSAGE+="📜 *List of Repositories:*\\n\`\`\`\n"
-  
+          [ -z "$SOURCE_URL" ] && SOURCE_URL="https://codeberg.org/smart-airdrop"
+
+          MESSAGE=$(printf "✅ *Repository Sync Completed\!*\\n\\n")
+          MESSAGE+=$(printf "📌 *Source:* [%s](%s)\\n" "$SOURCE_URL" "$SOURCE_URL")
+          MESSAGE+=$(printf "📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n")
+          MESSAGE+=$(printf "📜 *List of Repositories:*\\n\`\`\`\n")
+
           while IFS= read -r repo; do
             ESCAPED_REPO=$(escape_markdown "$repo")
-            MESSAGE+="$ESCAPED_REPO\\n"
+            MESSAGE+=$(printf "%s\\n" "$ESCAPED_REPO")
           done < repo_list.txt
-  
+
           MESSAGE+="\`\`\`" # Menutup code block
-  
+
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "message_thread_id=144" \
             -d "text=${MESSAGE}" \
             -d "parse_mode=MarkdownV2"
+
+# name: Comot koin-bot
+
+# on:
+#   push:
+#     branches:
+#       - main
+#   workflow_dispatch:
+#     inputs:
+#       SOURCE_URL:
+#         description: 'Source URL to clone repositories from'
+#         required: true
+#         default: 'https://codeberg.org/smart-airdrop'
+
+#   schedule:
+#     - cron: '0 0 * * *'  # Jalan setiap hari jam 00:00 UTC
+
+# jobs:
+#   sync-repos:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
+
+#       - name: Install dependencies
+#         run: sudo apt update && sudo apt install -y jq git
+
+#       - name: Get repository list from source
+#         run: |
+#           API_URL="https://codeberg.org/api/v1/users/smart-airdrop/repos"
+#           echo "Fetching repository list from $API_URL..."
+#           response=$(curl -s -H "Accept: application/json" "$API_URL")
+      
+#           if echo "$response" | jq empty 2>/dev/null; then
+#             repos=$(echo "$response" | jq -r '.[].name')
+#             echo "$repos" > repo_list.txt
+#             echo "REPO_LIST=$(echo "$repos" | tr '\n' ' ')" >> $GITHUB_ENV
+#           else
+#             echo "Error: Response is not a valid JSON"
+#             echo "Response: $response"
+#             exit 1
+#           fi
+
+#       - name: Clone repositories from Codeberg
+#         run: |
+#           mkdir repos && cd repos
+#           for repo in $(cat ../repo_list.txt); do
+#             git clone "https://codeberg.org/smart-airdrop/$repo.git" "$repo"
+#           done
+
+#       - name: Clean repositories (Remove .git and hidden files)
+#         run: |
+#           cd repos
+#           for repo in *; do
+#             echo "Cleaning repository: $repo"
+#             rm -rf "$repo/.git" "$repo/.github" "$repo/.gitignore"
+#           done
+
+#       - name: Generate README.md
+#         run: |
+#           echo "# List of Repositories" > README.md
+#           echo "" >> README.md
+#           for repo in $(cat repo_list.txt); do
+#             echo "- [$repo](https://github.com/rbbaprianto/bot-koin/tree/main/repos/$repo)" >> README.md
+#           done
+
+#       - name: Setup SSH Key
+#         run: |
+#           mkdir -p ~/.ssh
+#           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+#           chmod 600 ~/.ssh/id_ed25519
+#           eval "$(ssh-agent -s)"
+#           ssh-add ~/.ssh/id_ed25519
+#           ssh-keyscan github.com >> ~/.ssh/known_hosts
+    
+#       - name: Push changes
+#         run: |
+#           git config --global user.name "github-actions[bot]"
+#           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+#           git remote set-url origin git@github.com:rbbaprianto/bot-koin.git
+      
+#           # Tarik perubahan terbaru dari remote dengan rebase untuk menghindari konflik
+#           git pull --rebase origin main || echo "No remote changes"
+      
+#           # Tambahkan dan commit perubahan
+#           git add README.md
+#           git commit -m "Update README with new repo list" || echo "No changes to commit"
+      
+#           # Push ke repository
+#           GIT_SSH_COMMAND="ssh -v" git push origin main
+
+#       # - name: Send Telegram Notification
+#       #   run: |
+#       #     # Escape karakter khusus untuk MarkdownV2
+#       #     escape_markdown() {
+#       #       echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\\\&")}1'
+#       #     }
+  
+#       #     MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
+#       #     MESSAGE+="📌 *Source:* [Codeberg](https://codeberg.org/smart-airdrop)\\n"
+#       #     MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
+#       #     MESSAGE+="📜 *List of Repositories:*\\n\`\`\`"
+  
+#       #     while IFS= read -r repo; do
+#       #       ESCAPED_REPO=$(escape_markdown "$repo")
+#       #       MESSAGE+="\\n$ESCAPED_REPO"
+#       #     done < repo_list.txt
+  
+#       #     MESSAGE+="\\n\`\`\`" # Menutup code block
+  
+#       #     curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+#       #       -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+#       #       -d "message_thread_id=144" \
+#       #       -d "text=${MESSAGE}" \
+#       #       -d "parse_mode=MarkdownV2"
+
+#       - name: Send Telegram Notification
+#         run: |
+#           # Escape karakter khusus untuk MarkdownV2
+#           escape_markdown() {
+#             echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\\\&")}1'
+#           }
+  
+#           # Ambil input dari workflow dispatch
+#           SOURCE_URL="${{ github.event.inputs.SOURCE_URL }}"
+#           #TARGET_URL="${{ github.event.inputs.TARGET_URL }}"
+  
+#           MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
+#           MESSAGE+="📌 *Source:* [$SOURCE_URL]($SOURCE_URL)\\n"
+#           MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
+#           MESSAGE+="📜 *List of Repositories:*\\n\`\`\`\n"
+  
+#           while IFS= read -r repo; do
+#             ESCAPED_REPO=$(escape_markdown "$repo")
+#             MESSAGE+="$ESCAPED_REPO\\n"
+#           done < repo_list.txt
+  
+#           MESSAGE+="\`\`\`" # Menutup code block
+  
+#           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+#             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+#             -d "message_thread_id=144" \
+#             -d "text=${MESSAGE}" \
+#             -d "parse_mode=MarkdownV2"
