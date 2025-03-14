@@ -88,28 +88,56 @@ jobs:
           # Push ke repository
           GIT_SSH_COMMAND="ssh -v" git push origin main
 
-      - name: Send Telegram Notification
-        run: |
-          # Escape karakter khusus untuk MarkdownV2
-          escape_markdown() {
-            echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\\\&")}1'
-          }
+      # - name: Send Telegram Notification
+      #   run: |
+      #     # Escape karakter khusus untuk MarkdownV2
+      #     escape_markdown() {
+      #       echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\\\&")}1'
+      #     }
   
-          MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
-          MESSAGE+="📌 *Source:* [Codeberg](https://codeberg.org/smart-airdrop)\\n"
-          MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
-          MESSAGE+="📜 *List of Repositories:*\\n\`\`\`"
+      #     MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
+      #     MESSAGE+="📌 *Source:* [Codeberg](https://codeberg.org/smart-airdrop)\\n"
+      #     MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
+      #     MESSAGE+="📜 *List of Repositories:*\\n\`\`\`"
   
-          while IFS= read -r repo; do
-            ESCAPED_REPO=$(escape_markdown "$repo")
-            MESSAGE+="\\n$ESCAPED_REPO"
-          done < repo_list.txt
+      #     while IFS= read -r repo; do
+      #       ESCAPED_REPO=$(escape_markdown "$repo")
+      #       MESSAGE+="\\n$ESCAPED_REPO"
+      #     done < repo_list.txt
   
-          MESSAGE+="\\n\`\`\`" # Menutup code block
+      #     MESSAGE+="\\n\`\`\`" # Menutup code block
   
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "message_thread_id=144" \
-            -d "text=${MESSAGE}" \
-            -d "parse_mode=MarkdownV2"
+      #     curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+      #       -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+      #       -d "message_thread_id=144" \
+      #       -d "text=${MESSAGE}" \
+      #       -d "parse_mode=MarkdownV2"
 
+    - name: Send Telegram Notification
+      run: |
+        # Escape karakter khusus untuk MarkdownV2
+        escape_markdown() {
+          echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\\\&")}1'
+        }
+
+        # Ambil input dari workflow dispatch
+        SOURCE_URL="${{ github.event.inputs.SOURCE_URL }}"
+        #TARGET_URL="${{ github.event.inputs.TARGET_URL }}"
+
+        MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
+        MESSAGE+="📌 *Source:* [$SOURCE_URL]($SOURCE_URL)\\n"
+        MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
+        MESSAGE+="📜 *List of Repositories:*\\n\`\`\`\n"
+
+        while IFS= read -r repo; do
+          ESCAPED_REPO=$(escape_markdown "$repo")
+          MESSAGE+="$ESCAPED_REPO\\n"
+        done < repo_list.txt
+
+        MESSAGE+="\`\`\`" # Menutup code block
+
+        curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -d "message_thread_id=144" \
+          -d "text=${MESSAGE}" \
+          -d "parse_mode=MarkdownV2"
