@@ -6,10 +6,6 @@ on:
       SOURCE_URL:
         description: 'Source URL to clone repositories from'
         required: true
-        default: 'https://codeberg.org/smart-airdrop'
-
-  schedule:
-    - cron: '0 0 * * *'  # Jalan setiap hari jam 00:00 UTC
 
 jobs:
   sync-repos:
@@ -24,79 +20,57 @@ jobs:
       - name: Get repository list from source
         run: |
           API_URL="https://codeberg.org/api/v1/users/smart-airdrop/repos"
-          echo "Fetching repository list from $API_URL..."
-          response=$(curl -s -H "Accept: application/json" "$API_URL")
-      
-          if echo "$response" | jq empty 2>/dev/null; then
-            repos=$(echo "$response" | jq -r '.[].name')
+          RESPONSE=$(curl -s -H "Accept: application/json" "$API_URL")
+
+          if echo "$RESPONSE" | jq empty 2>/dev/null; then
+            repos=$(echo "$RESPONSE" | jq -r '.[].name')
             echo "$repos" > repo_list.txt
             echo "REPO_LIST=$(echo "$repos" | tr '\n' ' ')" >> $GITHUB_ENV
           else
-            echo "Error: Response is not a valid JSON"
-            echo "Response: $response"
+            echo "Error: Invalid JSON response"
+            echo "Response: $RESPONSE"
             exit 1
           fi
 
-      - name: Clone repositories from Codeberg
+      - name: Clone all repositories
         run: |
-          mkdir repos && cd repos
-          for repo in $(cat ../repo_list.txt); do
+          mkdir -p repos
+          cd repos
+          for repo in $REPO_LIST; do
             echo "Cloning $repo..."
-            git clone --depth=1 "https://codeberg.org/smart-airdrop/$repo.git" "$repo" || echo "Failed to clone $repo"
+            git clone --mirror "https://codeberg.org/smart-airdrop/$repo.git" "$repo" || echo "Failed to clone $repo"
           done
 
-      - name: Clean repositories (Remove .git and hidden files)
+      - name: Push to GitHub (Mirror)
         run: |
           cd repos
           for repo in *; do
-            echo "Cleaning repository: $repo"
-            rm -rf "$repo/.git" "$repo/.github" "$repo/.gitignore"
+            cd "$repo"
+            git remote set-url --push origin "git@github.com:rbbaprianto/bot-koin.git"
+            git push --mirror
+            cd ..
           done
-
-      - name: Copy repos to main directory
-        run: |
-          rm -rf old_repos
-          mv repos old_repos
-          mkdir -p repos
-          cp -r old_repos/* repos/
 
       - name: Generate README.md
         run: |
           echo "# List of Repositories" > README.md
           echo "" >> README.md
-          for repo in $(cat repo_list.txt); do
+          for repo in $REPO_LIST; do
             echo "- [$repo](https://github.com/rbbaprianto/bot-koin/tree/main/repos/$repo)" >> README.md
           done
 
-      - name: Setup SSH Key
+      - name: Push README.md
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_ed25519
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-    
-      - name: Push changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin git@github.com:rbbaprianto/bot-koin.git
-      
-          # Tarik perubahan terbaru dari remote dengan rebase untuk menghindari konflik
-          git pull --rebase origin main || echo "No remote changes"
-      
-          # Tambahkan dan commit perubahan
-          git add README.md repos/
-          git commit -m "Update repos and README" || echo "No changes to commit"
-      
-          # Push ke repository
-          GIT_SSH_COMMAND="ssh -v" git push origin main
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add README.md
+          git commit -m "Update README with new repo list" || echo "No new changes"
+          git push origin main
 
       - name: Send Telegram Notification
         run: |
           escape_markdown() {
-            echo "$1" | sed -e 's/\([\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]\)/\\\1/g'
+            echo "$1" | sed -e 's/[\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!]/\\&/g'
           }
   
           SOURCE_URL="${{ github.event.inputs.SOURCE_URL }}"
@@ -104,7 +78,7 @@ jobs:
           MESSAGE="✅ *Repository Sync Completed\!*\\n\\n"
           MESSAGE+="📌 *Source:* [$(escape_markdown "$SOURCE_URL")]($SOURCE_URL)\\n"
           MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
-          MESSAGE+="📜 *List of Repositories:*\\n\`\`\`\\n"
+          MESSAGE+="📜 *List of Repositories:*\\n\`\`\`"
   
           while IFS= read -r repo; do
             ESCAPED_REPO=$(escape_markdown "$repo")
