@@ -1,4 +1,4 @@
-name: Comot
+name: Comot koin-bot
 
 on:
   push:
@@ -64,12 +64,14 @@ jobs:
           done
 
       - name: Push changes
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          git remote set-url origin https://${{ secrets.PAT_TOKEN }}@github.com/rbbaprianto/bot-koin.git
-          
+      
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/rbbaprianto/bot-koin.git
+      
           git add README.md
           if git diff --cached --quiet; then
             echo "No changes to commit."
@@ -77,9 +79,6 @@ jobs:
             git commit -m "Update README with new repo list"
             git push origin main
           fi
-        env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
-
 
       - name: Send Telegram Notification
         run: |
