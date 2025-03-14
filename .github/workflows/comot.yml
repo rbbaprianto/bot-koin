@@ -88,10 +88,10 @@ jobs:
           # Push ke repository
           GIT_SSH_COMMAND="ssh -v" git push origin main
 
-        - name: Send Telegram Notification
+      - name: Send Telegram Notification
         run: |
           MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
-          #MESSAGE+="📌 *Source:* [Codeberg](https://codeberg.org/smart-airdrop)\\n"
+          MESSAGE+="📌 *Source:* [Codeberg](https://codeberg.org/smart-airdrop)\\n"
           MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
           MESSAGE+="📜 *List of Repositories:*\\n"
       
@@ -104,6 +104,7 @@ jobs:
             -d "message_thread_id=144" \
             -d "text=${MESSAGE}" \
             -d "parse_mode=MarkdownV2"
+
 
 
 
