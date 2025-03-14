@@ -1,6 +1,9 @@
-name: Comot koin-bot
+name: Repo bot-koin airdrop
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       SOURCE_URL:
