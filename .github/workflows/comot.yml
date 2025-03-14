@@ -96,12 +96,12 @@ jobs:
       - name: Send Telegram Notification
         run: |
           escape_markdown() {
-            echo "$1" | tr '_*[]()~`>#\+-=|{}.!' '________________'
+            echo "$1" | sed -E 's/([\_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!])/\\\1/g'
           }
       
           SOURCE_URL="${{ github.event.inputs.SOURCE_URL }}"
       
-          MESSAGE="✅ *Repository Sync Completed!*\\n\\n"
+          MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
           MESSAGE+="📌 *Source:* [$(escape_markdown "$SOURCE_URL")]($SOURCE_URL)\\n"
           MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
           MESSAGE+="📜 *List of Repositories:*\\n\`\`\`\\n"
@@ -118,3 +118,4 @@ jobs:
             -d "message_thread_id=144" \
             -d "text=${MESSAGE}" \
             -d "parse_mode=MarkdownV2"
+
