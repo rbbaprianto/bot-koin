@@ -90,13 +90,18 @@ jobs:
 
       - name: Send Telegram Notification
         run: |
-          MESSAGE="✅ *Repository Sync Completed\!*\\n\\n"
+          # Encode teks agar tidak error di MarkdownV2 Telegram
+          escape_markdown() {
+            echo "$1" | sed -E 's/([_*\[\]()~`>#\+\-=|{}.!])/\\\1/g'
+          }
+      
+          MESSAGE="✅ *Repository Sync Completed!*\\n\\n"
           MESSAGE+="📌 *Source:* [Codeberg](https://codeberg.org/smart-airdrop)\\n"
           MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
           MESSAGE+="📜 *List of Repositories:*\\n"
       
           while IFS= read -r repo; do
-            ESCAPED_REPO=$(echo "$repo" | sed 's/_/\\_/g')  # Escape karakter underscore
+            ESCAPED_REPO=$(escape_markdown "$repo")
             MESSAGE+="• \`$ESCAPED_REPO\`\\n"
           done < repo_list.txt
       
@@ -105,8 +110,3 @@ jobs:
             -d "message_thread_id=144" \
             -d "text=${MESSAGE}" \
             -d "parse_mode=MarkdownV2"
-
-
-
-
-
