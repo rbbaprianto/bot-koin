@@ -23,11 +23,20 @@ jobs:
 
       - name: Get repository list from source
         run: |
-          API_URL="${{ github.event.inputs.SOURCE_URL }}/api/v1/users/smart-airdrop/repos"
+          API_URL="https://codeberg.org/api/v1/users/smart-airdrop/repos"
           echo "Fetching repository list from $API_URL..."
-          repos=$(curl -s -H "Accept: application/json" "$API_URL" | jq -r '.[].name')
-          echo "$repos" > repo_list.txt
-          echo "REPO_LIST=$repos" >> $GITHUB_ENV
+          response=$(curl -s -H "Accept: application/json" "$API_URL")
+      
+          # Cek apakah response valid JSON
+          if echo "$response" | jq empty 2>/dev/null; then
+            repos=$(echo "$response" | jq -r '.[].name')
+            echo "$repos" > repo_list.txt
+            echo "REPO_LIST=$repos" >> $GITHUB_ENV
+          else
+            echo "Error: Response is not a valid JSON"
+            echo "Response: $response"
+            exit 1
+          fi
 
       - name: Clone repositories
         run: |
