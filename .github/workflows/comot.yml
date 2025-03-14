@@ -30,7 +30,6 @@ jobs:
           echo "Fetching repository list from $API_URL..."
           response=$(curl -s -H "Accept: application/json" "$API_URL")
       
-          # Cek apakah response valid JSON
           if echo "$response" | jq empty 2>/dev/null; then
             repos=$(echo "$response" | jq -r '.[].name')
             echo "$repos" > repo_list.txt
@@ -68,13 +67,19 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/rbbaprianto/bot-koin.git
+          
+          git remote set-url origin https://${{ secrets.PAT_TOKEN }}@github.com/rbbaprianto/bot-koin.git
+          
           git add README.md
-          git commit -m "Update README with new repo list" || echo "No changes to commit"
-          git push origin main
-
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Update README with new repo list"
+            git push origin main
+          fi
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+
 
       - name: Send Telegram Notification
         run: |
