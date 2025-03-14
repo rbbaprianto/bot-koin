@@ -95,7 +95,7 @@ jobs:
             echo "$1" | awk '{gsub(/[_*\[\]()~`>#\+\-=|{}.!]/, "\\&")}1'
           }
       
-          MESSAGE="✅ *Repository Sync Completed!*\\n\\n"
+          MESSAGE="✅ *Repository Sync Completed\\!*\\n\\n"
           MESSAGE+="📌 *Source:* [Codeberg](https://codeberg.org/smart-airdrop)\\n"
           MESSAGE+="📂 *Target:* [GitHub](https://github.com/rbbaprianto/bot-koin)\\n\\n"
           MESSAGE+="📜 *List of Repositories:*\\n"
